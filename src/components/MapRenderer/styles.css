@@ -1,5 +1,3 @@
-@import 'https://js.arcgis.com/4.32/esri/themes/dark/main.css';
+@import 'https://js.arcgis.com/4.32/esri/themes/dark/main.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
