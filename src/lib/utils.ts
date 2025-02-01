@@ -12,3 +12,6 @@ export const expose =
 type GlobalThisWithDevOnly = typeof globalThis & {
   _?: Record<string, unknown>;
 };
+
+export const GET = 0;
+export const SET = 1;
