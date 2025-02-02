@@ -9,7 +9,7 @@ export function useGameLogic(
   [menuState, setMenuState]: GetSet<MenuState>,
   view: MapView | undefined,
   interactionContainer: HTMLDivElement | null,
-): void {
+): Runtime | undefined {
   const setMenuStateRef = React.useRef(setMenuState);
   setMenuStateRef.current = setMenuState;
 
@@ -36,7 +36,7 @@ export function useGameLogic(
         return;
       }
 
-      const newMenuState = runtime!.tick(timePassed, moveAngle.current);
+      const newMenuState = runtime!.tick(timePassed);
       if (newMenuState !== undefined) {
         setMenuState(newMenuState);
       }
@@ -56,7 +56,7 @@ export function useGameLogic(
     }
 
     const stopPointerDown = listen(
-      interactionContainer,
+      document,
       'pointerdown',
       (event: PointerEvent): void => {
         /**
@@ -78,26 +78,18 @@ export function useGameLogic(
         return;
       }
 
-      const angle = pressedAngles.has(direction.north)
-        ? pressedAngles.has(direction.east)
-          ? 45
-          : pressedAngles.has(direction.west)
-            ? -45
-            : 0
-        : pressedAngles.has(direction.south)
-          ? pressedAngles.has(direction.east)
-            ? 135
-            : pressedAngles.has(direction.west)
-              ? -135
-              : 180
-          : pressedAngles.has(direction.east)
-            ? 90
-            : -90;
-      runtime?.moveOnce(angle);
+      const angle =
+        pressedAngles.has(direction.south) && pressedAngles.has(direction.west)
+          ? (-direction.south + direction.west) / 2
+          : Array.from(pressedAngles).reduce(
+              (total, angle) => total + angle,
+              0,
+            ) / pressedAngles.size;
+      runtime!.moveOnce(angle);
     }
 
     const stopKeyDown = listen(
-      interactionContainer,
+      document,
       'keydown',
       (event: KeyboardEvent): void => {
         const angle = keyMapping[event.key];
@@ -115,7 +107,7 @@ export function useGameLogic(
       { capture: true },
     );
     const stopKeyUp = listen(
-      interactionContainer,
+      document,
       'keyup',
       (event: KeyboardEvent): void => {
         const angle = keyMapping[event.key];
@@ -136,6 +128,8 @@ export function useGameLogic(
       stopKeyUp();
     };
   }, [runtime, interactionContainer]);
+
+  return runtime;
 }
 
 const keyMapping: IR<number> = {
