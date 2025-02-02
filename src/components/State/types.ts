@@ -10,9 +10,9 @@ export type MenuState =
   | { type: 'paused'; score: number };
 
 export const direction = {
-  up: 0,
-  right: 90,
-  down: 180,
-  left: 270,
-  altUp: 360,
+  east: 0,
+  north: 90,
+  west: 180,
+  south: 270,
+  altEast: 360,
 };

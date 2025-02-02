@@ -15,3 +15,22 @@ type GlobalThisWithDevOnly = typeof globalThis & {
 
 export const GET = 0;
 export const SET = 1;
+
+export function listen<EventName extends keyof GlobalEventHandlersEventMap>(
+  element: EventTarget,
+  eventName: EventName,
+  callback: (event: GlobalEventHandlersEventMap[EventName]) => void,
+  catchAll: AddEventListenerOptions | boolean = false,
+): () => void {
+  element.addEventListener(
+    eventName,
+    callback as (event: Event) => void,
+    catchAll,
+  );
+  return (): void =>
+    element.removeEventListener(
+      eventName,
+      callback as (event: Event) => void,
+      catchAll,
+    );
+}

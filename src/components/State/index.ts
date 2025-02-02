@@ -3,10 +3,12 @@ import type { GetSet, IR } from '../../lib/types';
 import { direction, type MenuState } from './types';
 import React from 'react';
 import { Runtime } from './runtime';
+import { listen } from '../../lib/utils';
 
 export function useGameLogic(
   [menuState, setMenuState]: GetSet<MenuState>,
   view: MapView | undefined,
+  interactionContainer: HTMLDivElement | null,
 ): void {
   const setMenuStateRef = React.useRef(setMenuState);
   setMenuStateRef.current = setMenuState;
@@ -19,6 +21,8 @@ export function useGameLogic(
     () => (view === undefined || isGameOver ? undefined : new Runtime(view)),
     [view, isGameOver],
   );
+  React.useEffect(() => (): void => runtime?.destroy(), []);
+
   const moveAngle = React.useRef<number | undefined>(undefined);
 
   React.useEffect(() => {
@@ -47,9 +51,25 @@ export function useGameLogic(
   }, [runtime, setMenuState]);
 
   React.useEffect(() => {
-    if (runtime === undefined) {
+    if (runtime === undefined || interactionContainer === null) {
       return;
     }
+
+    const stopPointerDown = listen(
+      interactionContainer,
+      'pointerdown',
+      (event: PointerEvent): void => {
+        /**
+         * Release implicit pointer capture on touch devices.
+         * See https://stackoverflow.com/a/70737325/8584605
+         */
+        if (interactionContainer.hasPointerCapture(event.pointerId)) {
+          interactionContainer.releasePointerCapture(event.pointerId);
+        }
+        runtime.pointerDown(event);
+      },
+      { passive: true },
+    );
 
     const pressedAngles = new Set<number>();
     function computeKeyAngle(): void {
@@ -58,65 +78,78 @@ export function useGameLogic(
         return;
       }
 
-      const hasLeft = pressedAngles.has(direction.left);
-      const angleSum = Array.from(pressedAngles).reduce(
-        (sum, angle) =>
-          sum + (hasLeft && angle === 0 ? direction.altUp : angle),
-        0,
-      );
-      const averageAngle = Math.round(angleSum / pressedAngles.size);
-      moveAngle.current = averageAngle;
+      const angle = pressedAngles.has(direction.north)
+        ? pressedAngles.has(direction.east)
+          ? 45
+          : pressedAngles.has(direction.west)
+            ? -45
+            : 0
+        : pressedAngles.has(direction.south)
+          ? pressedAngles.has(direction.east)
+            ? 135
+            : pressedAngles.has(direction.west)
+              ? -135
+              : 180
+          : pressedAngles.has(direction.east)
+            ? 90
+            : -90;
+      runtime?.moveOnce(angle);
     }
 
-    document.addEventListener('keydown', captureKeyDown, { capture: true });
-    function captureKeyDown(event: KeyboardEvent): void {
-      const angle = keyMapping[event.key];
-      if (angle !== undefined) {
-        pressedAngles.add(angle);
+    const stopKeyDown = listen(
+      interactionContainer,
+      'keydown',
+      (event: KeyboardEvent): void => {
+        const angle = keyMapping[event.key];
+        if (angle !== undefined) {
+          pressedAngles.add(angle);
+          computeKeyAngle();
+        } else if (event.key === 'Escape' || event.key === 'p') {
+          setMenuState({ type: 'paused', score: menuStateRef.current.score });
+        } else {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      { capture: true },
+    );
+    const stopKeyUp = listen(
+      interactionContainer,
+      'keyup',
+      (event: KeyboardEvent): void => {
+        const angle = keyMapping[event.key];
+        if (angle === undefined) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        pressedAngles.delete(angle);
         computeKeyAngle();
-      } else if (event.key === 'Escape' || event.key === 'p') {
-        setMenuState({ type: 'paused', score: menuStateRef.current.score });
-      } else {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    document.addEventListener('keyup', captureKeyUp, { capture: true });
-    function captureKeyUp(event: KeyboardEvent): void {
-      const angle = keyMapping[event.key];
-      if (angle === undefined) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      pressedAngles.delete(angle);
-      computeKeyAngle();
-    }
+      },
+      { capture: true },
+    );
 
     return (): void => {
-      document.removeEventListener('keydown', captureKeyDown, {
-        capture: true,
-      });
-      document.removeEventListener('keyup', captureKeyUp, {
-        capture: true,
-      });
+      stopPointerDown();
+      stopKeyDown();
+      stopKeyUp();
     };
-  }, [runtime]);
+  }, [runtime, interactionContainer]);
 }
 
 const keyMapping: IR<number> = {
-  ArrowUp: direction.up,
-  ArrowDown: direction.down,
-  ArrowLeft: direction.left,
-  ArrowRight: direction.right,
-  w: direction.up,
-  s: direction.down,
-  a: direction.left,
-  d: direction.right,
+  ArrowUp: direction.north,
+  ArrowDown: direction.south,
+  ArrowLeft: direction.west,
+  ArrowRight: direction.east,
+  w: direction.north,
+  s: direction.south,
+  a: direction.west,
+  d: direction.east,
   // For Vim users :)
-  k: direction.up,
-  j: direction.down,
-  h: direction.left,
-  l: direction.right,
+  k: direction.north,
+  j: direction.south,
+  h: direction.west,
+  l: direction.east,
 };

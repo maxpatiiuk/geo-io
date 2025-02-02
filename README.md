@@ -2,6 +2,10 @@
 
 ## TODO
 
+- Start map in random location
+- Handle map edges (wrap around or stop?)
+- Add mouse support
+- Disable mouse scroll, double click and other interactions
 - Add touchscreen support
 
 ## Installation

@@ -5,16 +5,21 @@ import { GameOverOverlay } from './GameOverOverlay';
 import { MapRenderer } from '../MapRenderer';
 import { pauseOverlay } from './PauseOverlay';
 import { GET, SET } from '../../lib/utils';
+import { GameOverlay } from './GameOverlay';
 
 const defaultState: MenuState = { type: 'main', score: 0 };
 export function Root(): React.ReactNode {
   const state = React.useState<MenuState>(defaultState);
   return (
     <>
-      <div className="flex h-screen w-screen items-center justify-center bg-black text-white">
-        <MapRenderer state={state} />
-        {state[GET].type === 'paused' && pauseOverlay}
-      </div>
+      <MapRenderer state={state} />
+      <GameOverlay
+        score={state[GET].score}
+        onPause={(): void =>
+          state[SET]({ type: 'paused', score: state[GET].score })
+        }
+      />
+      {state[GET].type === 'paused' && pauseOverlay}
       {state[GET].type === 'gameOver' && (
         <GameOverOverlay
           score={state[GET].score}
