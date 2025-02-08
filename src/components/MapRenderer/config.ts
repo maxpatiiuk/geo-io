@@ -1,7 +1,7 @@
 import Polygon from '@arcgis/core/geometry/Polygon.js';
 import SpatialReference from '@arcgis/core/geometry/SpatialReference.js';
 
-// Roughly equal zoom 22
+// Roughly equal to zoom 22
 export const scale = 2_311_162;
 
 /**
@@ -103,3 +103,12 @@ export const minLatitude = -65;
 export const maxLatitude = 75;
 export const minLongitude = -180;
 export const maxLongitude = 180;
+
+export const npcCount = 20;
+/*
+ * Play area is the size of the screen multiplied by this factor.
+ * NPCs are spawned within the active area of the player.
+ * If player moves, and NPC becomes outside of the active area, it will have
+ * strong compulsion to move back into the active area.
+ */
+export const activeAreaFactor = 8;

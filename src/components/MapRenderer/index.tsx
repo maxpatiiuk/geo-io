@@ -8,10 +8,15 @@ import type { MenuState } from '../State/types';
 import type { GetSet } from '../../lib/types';
 import type MapView from '@arcgis/core/views/MapView';
 import { useGameLogic } from '../State';
-import { getRandomStartPoint, viewConstraintExtent } from './utils';
+import {
+  getRandomStartPoint,
+  projectOperatorPromise,
+  viewConstraintExtent,
+} from './utils';
 import { createCharacter } from './character';
 import { scale } from './config';
 import { makeConsumablesLayer } from './consumables';
+import { createNpcs } from './npc';
 
 export function MapRenderer({
   state,
@@ -23,10 +28,20 @@ export function MapRenderer({
     React.useState<HTMLDivElement | null>(null);
   useGameLogic(state, view, interactionContainer);
 
+  const [projectLoaded, setProjectLoaded] = React.useState(false);
+  React.useEffect(
+    () => void projectOperatorPromise.then(() => setProjectLoaded(true)),
+    [],
+  );
+
   const randomCenter = React.useMemo(() => {
     const center = getRandomStartPoint();
     return [center.longitude!, center.latitude!];
   }, []);
+
+  if (!projectLoaded) {
+    return;
+  }
   return (
     <div tabIndex={0} ref={setInteractionContainer}>
       <div className="fixed top-[50vh] left-[50vw] z-10 h-1 w-1 bg-red-500"></div>
@@ -55,9 +70,10 @@ export function MapRenderer({
           }
           setView(view);
 
-          const featureLayer = makeConsumablesLayer();
-          const characterLayer = createCharacter(view);
-          view.map.addMany([characterLayer, featureLayer]);
+          const consumablesLayer = makeConsumablesLayer();
+          const charactersLayer = createCharacter(view);
+          charactersLayer.addMany(createNpcs(view));
+          view.map.addMany([consumablesLayer, charactersLayer]);
         }}
       />
     </div>

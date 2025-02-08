@@ -29,11 +29,11 @@ export class Runtime {
     const withView = this._viewModel as { view?: MapView };
     withView.view = this.view;
 
-    const character = (this.view.map.layers.at(0) as GraphicsLayer).graphics.at(
+    const character = (this.view.map.layers.at(1) as GraphicsLayer).graphics.at(
       0,
     )!;
     this._character = character;
-    const featureLayer = this.view.map.layers.at(1) as FeatureLayer;
+    const featureLayer = this.view.map.layers.at(0) as FeatureLayer;
 
     const characterSymbol = character.symbol as SimpleMarkerSymbol;
 
@@ -47,7 +47,7 @@ export class Runtime {
           query.geometry = character.geometry;
           // Symbol size is in px, but query distance is in meters - doing a
           // rough conversion here.
-          query.distance = 10_000 + characterSymbol.size * 250;
+          query.distance = 9_100 + characterSymbol.size * 250;
           query.units = 'meters';
           // query.distance
           const { features } = await layerView.queryFeatures(query);

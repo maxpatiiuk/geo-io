@@ -1,13 +1,13 @@
 export type MenuState =
   | {
-      type: 'gameOver';
-      score: number;
+      readonly type: 'gameOver';
+      readonly score: number;
     }
   | {
-      type: 'main';
-      score: number;
+      readonly type: 'main';
+      readonly score: number;
     }
-  | { type: 'paused'; score: number };
+  | { readonly type: 'paused'; readonly score: number };
 
 export const direction = {
   north: 0,
