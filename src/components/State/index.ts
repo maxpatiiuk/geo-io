@@ -97,7 +97,11 @@ export function useGameLogic(
           pressedAngles.add(angle);
           computeKeyAngle();
         } else if (event.key === 'Escape' || event.key === 'p') {
-          setMenuState({ type: 'paused', score: menuStateRef.current.score });
+          setMenuState(
+            menuStateRef.current.type === 'paused'
+              ? { type: 'main', score: menuStateRef.current.score }
+              : { type: 'paused', score: menuStateRef.current.score },
+          );
         } else {
           return;
         }

@@ -90,6 +90,7 @@ export class Runtime {
   }
 
   public pointerDown(event: PointerEvent): void {
+    // FEATURE: on touch devices, track around pointer start location rather than screen center? (so that fingers don't obscure the screen)
     this._viewModel.beginFollowingPointer(event, screenCenter);
   }
 
