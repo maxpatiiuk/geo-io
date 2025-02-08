@@ -7,7 +7,6 @@ import type GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
 import type FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import type FeatureLayerView from '@arcgis/core/views/layers/FeatureLayerView';
 import { throttle } from '../../lib/utils';
-import type Point from '@arcgis/core/geometry/Point';
 import { getRandomPoint } from '../MapRenderer/utils';
 import type SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 

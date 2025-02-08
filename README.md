@@ -1,16 +1,12 @@
 # geo-io
 
-Agar.io, but more mappy
+Agar.io, but more mappy.
 
 ## TODO
 
-- There is too much water - spawn on land only?
-  - https://developers.arcgis.com/javascript/latest/sample-code/sandbox/?sample=sketch-geometries
-  - console.log(()=>sketch.viewModel.layer.graphics.\_items[0].toJSON().geometry.rings);
-- Features don't spawn in whole map range - fix or constraint map movement
+- https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-FeatureLayer.html#orderBy
 - FEATURE: add mega-particles
 - FEATURE: implement mobs and AI
-- Handle map edges (wrap around or stop?)
 
 ## Installation
 
