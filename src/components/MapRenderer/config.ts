@@ -104,11 +104,12 @@ export const maxLatitude = 75;
 export const minLongitude = -180;
 export const maxLongitude = 180;
 
-export const npcCount = 20;
+export const npcCount = 10;
+export const npcMoveSpeed = 4000;
 /*
  * Play area is the size of the screen multiplied by this factor.
  * NPCs are spawned within the active area of the player.
  * If player moves, and NPC becomes outside of the active area, it will have
  * strong compulsion to move back into the active area.
  */
-export const activeAreaFactor = 8;
+export const activeAreaFactor = 2;

@@ -18,41 +18,17 @@ export function useGameLogic(
   menuStateRef.current = menuState;
   const isGameOver = menuState === 'gameOver';
 
-  const runtime = React.useMemo(
-    () =>
-      view === undefined || isGameOver || handleScoreUp === undefined
-        ? undefined
-        : new Runtime(view, handleScoreUp),
-    [view, isGameOver, handleScoreUp],
-  );
-  React.useEffect(() => (): void => runtime?.destroy(), []);
-
-  const moveAngle = React.useRef<number | undefined>(undefined);
-
+  const [runtime, setRuntime] = React.useState<Runtime | undefined>(undefined);
   React.useEffect(() => {
-    if (runtime === undefined) {
+    if (view === undefined || isGameOver || handleScoreUp === undefined) {
       return;
     }
+    const runtime = new Runtime(view, handleScoreUp, setMenuState);
+    setRuntime(runtime);
+    return (): void => runtime.destroy();
+  }, [view, isGameOver, handleScoreUp]);
 
-    let destructorCalled = false;
-    function gameLoop(timePassed: number): void {
-      if (destructorCalled) {
-        return;
-      }
-
-      const newMenuState = runtime!.tick(timePassed);
-      if (newMenuState !== undefined) {
-        setMenuState(newMenuState);
-      }
-
-      requestAnimationFrame(gameLoop);
-    }
-    gameLoop(0);
-
-    return (): void => {
-      destructorCalled = true;
-    };
-  }, [runtime, setMenuState]);
+  const moveAngle = React.useRef<number | undefined>(undefined);
 
   React.useEffect(() => {
     if (runtime === undefined || interactionContainer === null) {
@@ -62,7 +38,7 @@ export function useGameLogic(
     const stopPointerDown = listen(
       document,
       'pointerdown',
-      (event: PointerEvent): void => {
+      (event) => {
         /**
          * Release implicit pointer capture on touch devices.
          * See https://stackoverflow.com/a/70737325/8584605
@@ -92,10 +68,11 @@ export function useGameLogic(
       runtime!.moveOnce(angle);
     }
 
+    // FEATURE: use view's native keyboard handling to support gamepad?
     const stopKeyDown = listen(
       document,
       'keydown',
-      (event: KeyboardEvent): void => {
+      (event) => {
         const angle = keyMapping[event.key];
         if (angle !== undefined) {
           pressedAngles.add(angle);
@@ -113,7 +90,7 @@ export function useGameLogic(
     const stopKeyUp = listen(
       document,
       'keyup',
-      (event: KeyboardEvent): void => {
+      (event) => {
         const angle = keyMapping[event.key];
         if (angle === undefined) {
           return;

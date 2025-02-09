@@ -31,7 +31,9 @@ function getNpcSpawnPoint(view: MapView): Point {
   // Make sure NPM is close but not too close
   if (
     isInsideMercatorConstraint(x, y) &&
-    !isInsideMercatorViewExtent(x, y, view)
+    // During testing, this factor is sometimes set to 0.25 or etc
+    ((activeAreaFactor as number) < 2 ||
+      !isInsideMercatorViewExtent(x, y, view))
   ) {
     return new Point({
       spatialReference: view.spatialReference,
@@ -41,4 +43,30 @@ function getNpcSpawnPoint(view: MapView): Point {
   } else {
     return getNpcSpawnPoint(view);
   }
+}
+
+/**
+ * If point is outside the active area, get the angle in which the point should
+ * move to get back to the active area.
+ */
+export function getActiveAreaHeading(
+  view: MapView,
+  point: Point,
+): number | undefined {
+  const center = view.center;
+  const dx = center.x - point.x;
+  const dy = center.y - point.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  const screenSize = (view.extent.width + view.extent.height) / 2;
+  const activeAreaSize = screenSize * activeAreaFactor;
+  const isOutsideActiveArea = distance > activeAreaSize;
+  if (!isOutsideActiveArea) {
+    return undefined;
+  }
+
+  const radiansAngle = Math.atan2(dy, dx);
+  const angle = (radiansAngle * 180) / Math.PI;
+
+  return angle;
 }
