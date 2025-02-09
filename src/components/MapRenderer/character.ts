@@ -9,9 +9,8 @@ import {
   defaultSaturation,
   maxHue,
 } from './utils';
+import { initialSize } from './config';
 
-export const initialSize = 30;
-export const maxInitialSize = 400;
 const outlineSize = 4;
 
 export function createCharacter(view: MapView): GraphicsLayer {

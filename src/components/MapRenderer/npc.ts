@@ -1,7 +1,12 @@
 import Graphic from '@arcgis/core/Graphic.js';
 import type MapView from '@arcgis/core/views/MapView';
-import { initialSize, makePlayerSymbol, maxInitialSize } from './character';
-import { activeAreaFactor, npcCount } from './config';
+import { makePlayerSymbol } from './character';
+import {
+  activeAreaFactor,
+  initialSize,
+  maxInitialSize,
+  npcCount,
+} from './config';
 import Point from '@arcgis/core/geometry/Point.js';
 import {
   isInsideMercatorConstraint,
@@ -66,7 +71,23 @@ export function getActiveAreaHeading(
   }
 
   const radiansAngle = Math.atan2(dy, dx);
-  const angle = (radiansAngle * 180) / Math.PI;
+  const angle = radToDeg(radiansAngle);
 
   return angle;
 }
+
+export function isInActiveArea(
+  view: MapView,
+  distance: number,
+  factor = activeAreaFactor,
+): boolean {
+  const screenSize = (view.extent.width + view.extent.height) / 2;
+  const activeAreaSize = screenSize * activeAreaFactor;
+  return distance < activeAreaSize;
+}
+
+export const maxAngle = 180;
+export const radToDeg = (radians: number): number =>
+  (radians * maxAngle) / Math.PI;
+export const degToRad = (degrees: number): number =>
+  (degrees * Math.PI) / maxAngle;

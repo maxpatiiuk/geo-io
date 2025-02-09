@@ -13,8 +13,24 @@ import {
   isInsideMercatorConstraint,
 } from '../MapRenderer/utils';
 import type SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
-import { npcMoveSpeed } from '../MapRenderer/config';
-import { getActiveAreaHeading } from '../MapRenderer/npc';
+import {
+  attachAreaFactor,
+  attackChance,
+  attackPlanExpiration,
+  escapeAreaFactor,
+  escapeChance,
+  escapePlanExpiration,
+  npcMoveSpeed,
+  similarSizeThreshold,
+  wonderingPlanExpiration,
+} from '../MapRenderer/config';
+import {
+  degToRad,
+  getActiveAreaHeading,
+  isInActiveArea,
+  maxAngle,
+  radToDeg,
+} from '../MapRenderer/npc';
 
 const getScreenCenter = (): { x: number; y: number } => ({
   x: Math.round(window.innerWidth / 2),
@@ -28,25 +44,16 @@ const featureQueryThrottleRate = 100;
 
 type Npc = {
   graphic: Graphic;
-  plan: NpcPlan;
+  direction: number;
   planExpiration: number;
 };
-type NpcPlan =
-  | {
-      // This may mean run away, return to active area or wander around
-      type: 'direction';
-      direction: number;
-    }
-  | {
-      type: 'attack';
-      target: Graphic;
-    };
 
 export class Runtime {
   private readonly _viewModel = new DirectionalPadViewModel();
   private readonly _handles: IHandle[] = [];
   private readonly _character: Graphic;
   private readonly _npcs: Npc[];
+  private readonly _entities: Graphic[] = [];
   private readonly _featureLayer: FeatureLayer;
   private _layerView: __esri.FeatureLayerView | undefined;
   constructor(
@@ -63,15 +70,14 @@ export class Runtime {
     ).graphics.toArray();
 
     this._character = character!;
-    // FEATURE: make NPCs run away if larger entity is close
-    // FEATURE: make NPCs attack if smaller entity is close (with some chance to give up)
     // FEATURE: make NPCs re-span if it is consumed (and re-size to ~player size)
     // FEATURE: trigger game over if player is consumed
     this._npcs = npcs.map((graphic) => ({
       graphic,
-      plan: { type: 'direction', direction: 0 },
+      direction: 0,
       planExpiration: 0,
     }));
+    this._entities = [character!, ...npcs];
     const featureLayer = this.view.map.layers.at(0) as FeatureLayer;
     this._featureLayer = featureLayer;
 
@@ -124,7 +130,7 @@ export class Runtime {
     query.geometry = character.geometry;
     // Symbol size is in px, but query distance is in meters - doing a
     // rough conversion here.
-    query.distance = 8_600 + characterSymbol.size * 255;
+    query.distance = 8_600 + characterSymbol.size * 252;
     query.units = 'meters';
     const { features } = await layerView.queryFeatures(query);
     if (features.length === 0) {
@@ -140,6 +146,7 @@ export class Runtime {
 
     // Increase area at a constant rate per particle - which means radios
     // will increase at an ever decreasing rate.
+    // FEATURE: increase this when in "competitive" mode
     const growthFactor = 45;
     const oldRadius = characterSymbol.size;
     const oldArea = Math.PI * (oldRadius * oldRadius);
@@ -155,48 +162,101 @@ export class Runtime {
     this._npcs.forEach((npc) => {
       const point = npc.graphic.geometry as Point;
       if (npc.planExpiration < now) {
-        /*npc.planExpiration = now + Math.random() * 2_000;
-        let previousDirection =
-          npc.plan.type === 'direction' ? npc.plan.direction : 0;
-        if (previousDirection > 180) {
-          previousDirection = previousDirection - 360;
-        }
-        npc.plan = {
-          type: 'direction',
-          direction: previousDirection + 20,
-        };
-        const radiansAngle = (npc.plan.direction * Math.PI) / 180;
-        console.log(npc.plan.direction);*/
-        npc.planExpiration = now + Math.random() * 2_000;
-        const activeAreaHeading = getActiveAreaHeading(this.view, point);
-        if (activeAreaHeading !== undefined) {
-          npc.plan = { type: 'direction', direction: activeAreaHeading };
-        } else {
-          const previousDirection =
-            npc.plan.type === 'direction' ? npc.plan.direction : 0;
-          npc.plan = {
-            type: 'direction',
-            direction: previousDirection + (Math.random() * 180 - 90),
-          };
-        }
-        const radiansAngle = (npc.plan.direction * Math.PI) / 180;
-        console.log(npc.plan.direction);
+        const [newDirection, expiration] = this._computeNeighborVector(
+          npc.graphic,
+        ) ?? [
+          npc.direction + (Math.random() * maxAngle - maxAngle / 2),
+          wonderingPlanExpiration,
+        ];
+        npc.planExpiration = now + Math.random() * expiration;
+        npc.direction = newDirection;
       }
-      if (npc.plan.type === 'direction') {
-        const { x, y, spatialReference } = point;
-        const radiansAngle = (npc.plan.direction * Math.PI) / 180;
-        const newX = x + Math.cos(radiansAngle) * npcMoveSpeed;
-        const newY = y + Math.sin(radiansAngle) * npcMoveSpeed;
-        if (isInsideMercatorConstraint(newX, newY)) {
-          npc.graphic.geometry = new Point({
-            x: newX,
-            y: newY,
-            spatialReference,
-          });
-        } else {
-          npc.planExpiration = 0;
-        }
+      const { x, y, spatialReference } = point;
+      const radiansAngle = degToRad(npc.direction);
+      const newX = x + Math.cos(radiansAngle) * npcMoveSpeed;
+      const newY = y + Math.sin(radiansAngle) * npcMoveSpeed;
+      if (isInsideMercatorConstraint(newX, newY)) {
+        npc.graphic.geometry = new Point({
+          x: newX,
+          y: newY,
+          spatialReference,
+        });
+      } else {
+        npc.planExpiration = 0;
       }
     });
+  }
+
+  /**
+   * Find enemies/prey and decide to move to them or away.
+   */
+  private _computeNeighborVector(
+    npc: Graphic,
+  ): [direction: number, expiration: number] | undefined {
+    let enemyX = 0;
+    let enemyY = 0;
+    let preyX = 0;
+    let preyY = 0;
+    let preyDistance = Number.POSITIVE_INFINITY;
+    const point = npc.geometry as Point;
+    const size = (npc.symbol as SimpleMarkerSymbol).size;
+    this._entities.forEach((entity) => {
+      if (npc === entity) {
+        return;
+      }
+
+      const size2 = (entity.symbol as SimpleMarkerSymbol).size;
+      const isSimilarSize =
+        Math.abs(size - size2) < Math.max(size, size2) * similarSizeThreshold;
+      if (isSimilarSize) {
+        return;
+      }
+
+      const point2 = entity.geometry as Point;
+      const dx = point2.x - point.x;
+      const dy = point2.y - point.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const isPrey = size > size2;
+      if (
+        !isInActiveArea(
+          this.view,
+          distance,
+          isPrey ? escapeAreaFactor : attachAreaFactor,
+        )
+      ) {
+        return;
+      }
+
+      if (isPrey) {
+        if (distance < preyDistance) {
+          // Only consider the closest prey
+          preyX = dx;
+          preyY = dy;
+          preyDistance = distance;
+        }
+      } else {
+        // Compute vector away from all enemies
+        enemyX -= dx;
+        enemyY -= dy;
+      }
+    });
+
+    if ((enemyX !== 0 || enemyY !== 0) && Math.random() < escapeChance) {
+      console.log('escape');
+      const direction = radToDeg(Math.atan2(enemyY, enemyX));
+      return [direction, escapePlanExpiration];
+    }
+    const activeAreaHeading = getActiveAreaHeading(this.view, point);
+    if (activeAreaHeading !== undefined) {
+      console.log('return to active area');
+      return [activeAreaHeading, wonderingPlanExpiration];
+    } else if ((preyX !== 0 || preyY !== 0) && Math.random() < attackChance) {
+      console.log('attack');
+      const direction = radToDeg(Math.atan2(preyY, preyX));
+      return [direction, attackPlanExpiration];
+    } else {
+      console.log('wander');
+      return;
+    }
   }
 }

@@ -113,3 +113,17 @@ export const npcMoveSpeed = 4000;
  * strong compulsion to move back into the active area.
  */
 export const activeAreaFactor = 2;
+/**
+ * Area within which NPCs will look for attaching/defending
+ */
+export const attachAreaFactor = Math.max(activeAreaFactor / 2, 0.5);
+export const escapeAreaFactor = Math.max(activeAreaFactor / 4, 1);
+export const similarSizeThreshold = 0.1;
+export const wonderingPlanExpiration = 2000;
+export const attackPlanExpiration = 1000;
+export const escapePlanExpiration = 500;
+export const attackChance = 0.9;
+export const escapeChance = 0.99;
+
+export const initialSize = 30;
+export const maxInitialSize = 200;

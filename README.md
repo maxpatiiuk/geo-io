@@ -5,8 +5,8 @@ Agar.io, but more mappy.
 ## TODO
 
 - https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-FeatureLayer.html#orderBy
+- FEATURE: separate competitive and peaceful modes
 - FEATURE: add mega-particles
-- FEATURE: implement mobs and AI
 
 ## Installation
 
