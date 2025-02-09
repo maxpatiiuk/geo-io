@@ -6,24 +6,54 @@ import { MapRenderer } from '../MapRenderer';
 import { pauseOverlay } from './PauseOverlay';
 import { GET, SET } from '../../lib/utils';
 import { GameOverlay } from './GameOverlay';
+import type { GetSet } from '../../lib/types';
 
-const defaultState: MenuState = { type: 'main', score: 0 };
 export function Root(): React.ReactNode {
-  const state = React.useState<MenuState>(defaultState);
+  const [handleScoreUp, setHandleScoreUp] =
+    React.useState<(increment: number) => void>();
+  const state = React.useState<MenuState>('main');
   return (
     <>
-      <MapRenderer state={state} />
-      <GameOverlay
-        score={state[GET].score}
-        onPause={(): void =>
-          state[SET]({ type: 'paused', score: state[GET].score })
-        }
-      />
-      {state[GET].type === 'paused' && pauseOverlay}
-      {state[GET].type === 'gameOver' && (
+      <MapRenderer state={state} onScoreUp={handleScoreUp} />
+      <AsideContent state={state} setHandleScoreUp={setHandleScoreUp} />
+    </>
+  );
+}
+
+function AsideContent({
+  state,
+  setHandleScoreUp,
+}: {
+  state: GetSet<MenuState>;
+  setHandleScoreUp: (
+    callback: ((increment: number) => void) | undefined,
+  ) => void;
+}): React.ReactNode {
+  // Trying to avoid Root and MapRenderer re-render on score change so keeping state here
+  const [score, setScore] = React.useState(0);
+  const handleScoreUpCallback = React.useCallback(
+    (increment: number) => setScore((score) => score + increment),
+    [],
+  );
+  React.useEffect(() => {
+    setHandleScoreUp(() => handleScoreUpCallback);
+  }, []);
+
+  const previousStateRef = React.useRef<MenuState>(state[GET]);
+  React.useEffect(() => {
+    if (state[GET] === 'main' && previousStateRef.current === 'gameOver') {
+      setScore(0);
+    }
+    previousStateRef.current = state[GET];
+  }, [state[GET]]);
+  return (
+    <>
+      <GameOverlay score={score} onPause={(): void => state[SET]('paused')} />
+      {state[GET] === 'paused' && pauseOverlay}
+      {state[GET] === 'gameOver' && (
         <GameOverOverlay
-          score={state[GET].score}
-          onRestart={(): void => state[SET](defaultState)}
+          score={score}
+          onRestart={(): void => state[SET]('main')}
         />
       )}
     </>

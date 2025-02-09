@@ -20,13 +20,15 @@ import { createNpcs } from './npc';
 
 export function MapRenderer({
   state,
+  onScoreUp: handleScoreUp,
 }: {
   state: GetSet<MenuState>;
+  onScoreUp?: (increment: number) => void;
 }): React.ReactNode {
   const [view, setView] = React.useState<MapView | undefined>(undefined);
   const [interactionContainer, setInteractionContainer] =
     React.useState<HTMLDivElement | null>(null);
-  useGameLogic(state, view, interactionContainer);
+  useGameLogic(state, view, interactionContainer, handleScoreUp);
 
   const [projectLoaded, setProjectLoaded] = React.useState(false);
   React.useEffect(
@@ -44,7 +46,6 @@ export function MapRenderer({
   }
   return (
     <div tabIndex={0} ref={setInteractionContainer}>
-      <div className="fixed top-[50vh] left-[50vw] z-10 h-1 w-1 bg-red-500"></div>
       <arcgis-map
         itemId="8d91bd39e873417ea21673e0fee87604"
         className="pointer-events-none block h-screen"

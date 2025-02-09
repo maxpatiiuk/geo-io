@@ -9,17 +9,21 @@ export function useGameLogic(
   [menuState, setMenuState]: GetSet<MenuState>,
   view: MapView | undefined,
   interactionContainer: HTMLDivElement | null,
+  handleScoreUp: ((increment: number) => void) | undefined,
 ): Runtime | undefined {
   const setMenuStateRef = React.useRef(setMenuState);
   setMenuStateRef.current = setMenuState;
 
   const menuStateRef = React.useRef(menuState);
   menuStateRef.current = menuState;
-  const isGameOver = menuState.type === 'gameOver';
+  const isGameOver = menuState === 'gameOver';
 
   const runtime = React.useMemo(
-    () => (view === undefined || isGameOver ? undefined : new Runtime(view)),
-    [view, isGameOver],
+    () =>
+      view === undefined || isGameOver || handleScoreUp === undefined
+        ? undefined
+        : new Runtime(view, handleScoreUp),
+    [view, isGameOver, handleScoreUp],
   );
   React.useEffect(() => (): void => runtime?.destroy(), []);
 
@@ -97,11 +101,7 @@ export function useGameLogic(
           pressedAngles.add(angle);
           computeKeyAngle();
         } else if (event.key === 'Escape' || event.key === 'p') {
-          setMenuState(
-            menuStateRef.current.type === 'paused'
-              ? { type: 'main', score: menuStateRef.current.score }
-              : { type: 'paused', score: menuStateRef.current.score },
-          );
+          setMenuState(menuStateRef.current === 'paused' ? 'main' : 'paused');
         } else {
           return;
         }

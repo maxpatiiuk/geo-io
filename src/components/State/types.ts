@@ -1,13 +1,4 @@
-export type MenuState =
-  | {
-      readonly type: 'gameOver';
-      readonly score: number;
-    }
-  | {
-      readonly type: 'main';
-      readonly score: number;
-    }
-  | { readonly type: 'paused'; readonly score: number };
+export type MenuState = 'gameOver' | 'main' | 'paused';
 
 export const direction = {
   north: 0,

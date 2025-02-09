@@ -11,13 +11,7 @@ export function GameOverOverlay({
   readonly score: number;
   readonly onRestart: () => void;
 }): React.ReactNode {
-  const [bestScore, setBestScore] = useHighScore();
-  const previousBestScore = React.useRef(bestScore).current;
-
-  React.useEffect(
-    () => setBestScore(Math.max(bestScore, score)),
-    [score, bestScore],
-  );
+  const [bestScore] = useHighScore();
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-center text-3xl">
@@ -27,7 +21,7 @@ export function GameOverOverlay({
           {localization.score} {score}
         </h2>
         <h2>
-          {localization.highScore} {previousBestScore}
+          {localization.highScore} {bestScore}
         </h2>
         <div className="flex gap-4">
           <button

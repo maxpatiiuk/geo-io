@@ -9,7 +9,11 @@ export function GameOverlay({
   score: number;
   onPause: () => void;
 }): React.ReactNode {
-  const [bestScore] = useHighScore();
+  const [bestScore, setBestScore] = useHighScore();
+  const previousBestScore = React.useRef(bestScore).current;
+
+  const newBestScore = Math.max(score, previousBestScore);
+  React.useEffect(() => setBestScore(newBestScore), [newBestScore]);
   return (
     <button
       type="button"
@@ -17,7 +21,7 @@ export function GameOverlay({
       onClick={handlePause}
     >
       {localization.score}
-      <span className={score > bestScore ? 'text-red-500' : undefined}>
+      <span className={score >= bestScore ? 'text-red-500' : undefined}>
         {score}
       </span>
     </button>
