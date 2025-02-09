@@ -4,8 +4,9 @@ import { makePlayerSymbol } from './character';
 import {
   activeAreaFactor,
   initialSize,
-  maxInitialSize,
   npcCount,
+  npcSizeMaxFactor,
+  npcSizeMinFactor,
 } from './config';
 import Point from '@arcgis/core/geometry/Point.js';
 import {
@@ -15,7 +16,7 @@ import {
 
 export function createNpcs(view: MapView): Graphic[] {
   return Array.from({ length: npcCount }, () => {
-    const size = Math.random() * (maxInitialSize - initialSize) + initialSize;
+    const size = getNpcSize();
     return new Graphic({
       symbol: makePlayerSymbol(size),
       geometry: getNpcSpawnPoint(view),
@@ -23,8 +24,14 @@ export function createNpcs(view: MapView): Graphic[] {
   });
 }
 
-function getNpcSpawnPoint(view: MapView): Point {
-  // debugger;
+export const getNpcSize = (playerSize = initialSize): number =>
+  playerSize *
+  (Math.random() * (npcSizeMaxFactor * npcSizeMinFactor) + npcSizeMinFactor);
+
+export function getNpcSpawnPoint(
+  view: MapView,
+  area = activeAreaFactor,
+): Point {
   const activeAreaWidth = view.extent.width * activeAreaFactor;
   const activeAreaHeight = view.extent.height * activeAreaFactor;
 
@@ -33,12 +40,11 @@ function getNpcSpawnPoint(view: MapView): Point {
   const y =
     view.center.y + Math.random() * activeAreaHeight - activeAreaHeight / 2;
 
-  // Make sure NPM is close but not too close
+  // Make sure NPC is close but not too close
   if (
     isInsideMercatorConstraint(x, y) &&
     // During testing, this factor is sometimes set to 0.25 or etc
-    ((activeAreaFactor as number) < 2 ||
-      !isInsideMercatorViewExtent(x, y, view))
+    (area < 2 || !isInsideMercatorViewExtent(x, y, view))
   ) {
     return new Point({
       spatialReference: view.spatialReference,
@@ -46,7 +52,7 @@ function getNpcSpawnPoint(view: MapView): Point {
       y,
     });
   } else {
-    return getNpcSpawnPoint(view);
+    return getNpcSpawnPoint(view, area);
   }
 }
 
@@ -82,7 +88,7 @@ export function isInActiveArea(
   factor = activeAreaFactor,
 ): boolean {
   const screenSize = (view.extent.width + view.extent.height) / 2;
-  const activeAreaSize = screenSize * activeAreaFactor;
+  const activeAreaSize = screenSize * factor;
   return distance < activeAreaSize;
 }
 

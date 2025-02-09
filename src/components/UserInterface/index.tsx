@@ -12,9 +12,17 @@ export function Root(): React.ReactNode {
   const [handleScoreUp, setHandleScoreUp] =
     React.useState<(increment: number) => void>();
   const state = React.useState<MenuState>('main');
+  const previousStateRef = React.useRef<MenuState>(state[GET]);
+  const [gameCount, setGameCount] = React.useState(0);
+  React.useEffect(() => {
+    if (state[GET] === 'main' && previousStateRef.current === 'gameOver') {
+      setGameCount((count) => count + 1);
+    }
+    previousStateRef.current = state[GET];
+  }, [state[GET]]);
   return (
     <>
-      <MapRenderer state={state} onScoreUp={handleScoreUp} />
+      <MapRenderer state={state} onScoreUp={handleScoreUp} key={gameCount} />
       <AsideContent state={state} setHandleScoreUp={setHandleScoreUp} />
     </>
   );
@@ -48,13 +56,14 @@ function AsideContent({
   }, [state[GET]]);
   return (
     <>
-      <GameOverlay score={score} onPause={(): void => state[SET]('paused')} />
       {state[GET] === 'paused' && pauseOverlay}
-      {state[GET] === 'gameOver' && (
+      {state[GET] === 'gameOver' ? (
         <GameOverOverlay
           score={score}
           onRestart={(): void => state[SET]('main')}
         />
+      ) : (
+        <GameOverlay score={score} onPause={(): void => state[SET]('paused')} />
       )}
     </>
   );

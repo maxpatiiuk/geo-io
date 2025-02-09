@@ -14,23 +14,32 @@ import {
 } from '../MapRenderer/utils';
 import type SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
 import {
-  attachAreaFactor,
+  attackAreaFactor,
   attackChance,
   attackPlanExpiration,
   escapeAreaFactor,
   escapeChance,
   escapePlanExpiration,
   npcMoveSpeed,
+  reSpawnAreaFactor,
+  similarSizeAlternativeThreshold,
   similarSizeThreshold,
   wonderingPlanExpiration,
 } from '../MapRenderer/config';
 import {
   degToRad,
   getActiveAreaHeading,
+  getNpcSize,
+  getNpcSpawnPoint,
   isInActiveArea,
   maxAngle,
   radToDeg,
 } from '../MapRenderer/npc';
+import {
+  increaseRadius,
+  pxToDistance,
+  makePlayerSymbol,
+} from '../MapRenderer/character';
 
 const getScreenCenter = (): { x: number; y: number } => ({
   x: Math.round(window.innerWidth / 2),
@@ -52,9 +61,11 @@ export class Runtime {
   private readonly _viewModel = new DirectionalPadViewModel();
   private readonly _handles: IHandle[] = [];
   private readonly _character: Graphic;
+  private readonly _characterSymbol: SimpleMarkerSymbol;
   private readonly _npcs: Npc[];
   private readonly _entities: Graphic[] = [];
-  private readonly _featureLayer: FeatureLayer;
+  private readonly _entitiesLayer: GraphicsLayer;
+  private readonly _consumablesLayer: FeatureLayer;
   private _layerView: __esri.FeatureLayerView | undefined;
   constructor(
     public readonly view: MapView,
@@ -65,13 +76,12 @@ export class Runtime {
     const withView = this._viewModel as { view?: MapView };
     withView.view = this.view;
 
-    const [character, ...npcs] = (
-      this.view.map.layers.at(1) as GraphicsLayer
-    ).graphics.toArray();
+    this._entitiesLayer = this.view.map.layers.at(1) as GraphicsLayer;
+    const [character, ...npcs] = this._entitiesLayer.graphics.toArray();
+    this._sortEntities();
 
     this._character = character!;
-    // FEATURE: make NPCs re-span if it is consumed (and re-size to ~player size)
-    // FEATURE: trigger game over if player is consumed
+    this._characterSymbol = character!.symbol as SimpleMarkerSymbol;
     this._npcs = npcs.map((graphic) => ({
       graphic,
       direction: 0,
@@ -79,7 +89,7 @@ export class Runtime {
     }));
     this._entities = [character!, ...npcs];
     const featureLayer = this.view.map.layers.at(0) as FeatureLayer;
-    this._featureLayer = featureLayer;
+    this._consumablesLayer = featureLayer;
 
     void view
       .whenLayerView(featureLayer)
@@ -125,12 +135,9 @@ export class Runtime {
     const character = this._character;
     const layerView = this._layerView!;
 
-    const characterSymbol = character.symbol as SimpleMarkerSymbol;
     const query = layerView.createQuery();
     query.geometry = character.geometry;
-    // Symbol size is in px, but query distance is in meters - doing a
-    // rough conversion here.
-    query.distance = 8_600 + characterSymbol.size * 252;
+    query.distance = pxToDistance(this._characterSymbol.size);
     query.units = 'meters';
     const { features } = await layerView.queryFeatures(query);
     if (features.length === 0) {
@@ -140,37 +147,40 @@ export class Runtime {
     features.forEach((feature) => {
       feature.geometry = getRandomPoint();
     });
-    void this._featureLayer.applyEdits({
+    void this._consumablesLayer.applyEdits({
       updateFeatures: features,
     });
 
-    // Increase area at a constant rate per particle - which means radios
-    // will increase at an ever decreasing rate.
-    // FEATURE: increase this when in "competitive" mode
-    const growthFactor = 45;
-    const oldRadius = characterSymbol.size;
-    const oldArea = Math.PI * (oldRadius * oldRadius);
-    const newArea = oldArea + (features.length + growthFactor);
-    const newRadius = Math.sqrt(newArea / Math.PI);
-
-    characterSymbol.size = newRadius;
+    this._characterSymbol.size = increaseRadius(
+      this._characterSymbol.size,
+      features.length,
+    );
     this._handleScoreUp(features.length);
+    this._sortEntities();
   }, featureQueryThrottleRate);
 
   private _makeNpcsAct(): void {
     const now = Date.now();
     this._npcs.forEach((npc) => {
       const point = npc.graphic.geometry as Point;
-      if (npc.planExpiration < now) {
-        const [newDirection, expiration] = this._computeNeighborVector(
-          npc.graphic,
-        ) ?? [
+      const isPlanExpired = npc.planExpiration < now;
+      const newPlan = this._computeNeighborInteractions(
+        npc.graphic,
+        isPlanExpired,
+      );
+      if (newPlan === false) {
+        return;
+      }
+
+      if (isPlanExpired) {
+        const [newDirection, expiration] = newPlan ?? [
           npc.direction + (Math.random() * maxAngle - maxAngle / 2),
           wonderingPlanExpiration,
         ];
         npc.planExpiration = now + Math.random() * expiration;
         npc.direction = newDirection;
       }
+
       const { x, y, spatialReference } = point;
       const radiansAngle = degToRad(npc.direction);
       const newX = x + Math.cos(radiansAngle) * npcMoveSpeed;
@@ -190,44 +200,61 @@ export class Runtime {
   /**
    * Find enemies/prey and decide to move to them or away.
    */
-  private _computeNeighborVector(
+  private _computeNeighborInteractions(
     npc: Graphic,
-  ): [direction: number, expiration: number] | undefined {
+    isPlanExpired: boolean,
+  ): false | [direction: number, expiration: number] | undefined {
     let enemyX = 0;
     let enemyY = 0;
     let preyX = 0;
     let preyY = 0;
     let preyDistance = Number.POSITIVE_INFINITY;
-    const point = npc.geometry as Point;
-    const size = (npc.symbol as SimpleMarkerSymbol).size;
+    let wasConsumed = false as boolean;
+    const npcPoint = npc.geometry as Point;
+    const npcSymbol = npc.symbol as SimpleMarkerSymbol;
+    const npcSize = npcSymbol.size;
     this._entities.forEach((entity) => {
       if (npc === entity) {
         return;
       }
 
-      const size2 = (entity.symbol as SimpleMarkerSymbol).size;
+      const entitySymbol = entity.symbol as SimpleMarkerSymbol;
+      const entitySize = entitySymbol.size;
       const isSimilarSize =
-        Math.abs(size - size2) < Math.max(size, size2) * similarSizeThreshold;
+        Math.abs(npcSize - entitySize) <
+        Math.min(
+          similarSizeAlternativeThreshold,
+          npcSize * similarSizeThreshold,
+        );
       if (isSimilarSize) {
         return;
       }
 
-      const point2 = entity.geometry as Point;
-      const dx = point2.x - point.x;
-      const dy = point2.y - point.y;
+      const entityPoint = entity.geometry as Point;
+      const dx = entityPoint.x - npcPoint.x;
+      const dy = entityPoint.y - npcPoint.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      const isPrey = size > size2;
+      const isPrey = npcSize > entitySize;
       if (
         !isInActiveArea(
           this.view,
           distance,
-          isPrey ? escapeAreaFactor : attachAreaFactor,
+          isPrey ? escapeAreaFactor : attackAreaFactor,
         )
       ) {
         return;
       }
 
+      const isPlayer = entity === this._character;
       if (isPrey) {
+        if (isPlayer) {
+          const entityReach = pxToDistance(npcSize);
+          const isInside = distance < entityReach;
+          if (isInside) {
+            this._setMenuState('gameOver');
+          }
+        }
+
         if (distance < preyDistance) {
           // Only consider the closest prey
           preyX = dx;
@@ -235,28 +262,58 @@ export class Runtime {
           preyDistance = distance;
         }
       } else {
+        const enemyReach = pxToDistance(entitySize);
+        const isInside = distance < enemyReach;
+        if (isInside) {
+          entitySymbol.size = increaseRadius(entitySize, npcSize);
+          if (isPlayer) {
+            this._handleScoreUp(Math.round(npcSize));
+          }
+          npc.geometry = getNpcSpawnPoint(this.view, reSpawnAreaFactor);
+          npc.symbol = makePlayerSymbol(getNpcSize(this._characterSymbol.size));
+          this._sortEntities();
+          wasConsumed = true;
+          return;
+        }
         // Compute vector away from all enemies
         enemyX -= dx;
         enemyY -= dy;
       }
     });
+    if (wasConsumed) {
+      return false;
+    }
 
     if ((enemyX !== 0 || enemyY !== 0) && Math.random() < escapeChance) {
-      console.log('escape');
       const direction = radToDeg(Math.atan2(enemyY, enemyX));
+      // Escape
       return [direction, escapePlanExpiration];
-    }
-    const activeAreaHeading = getActiveAreaHeading(this.view, point);
-    if (activeAreaHeading !== undefined) {
-      console.log('return to active area');
-      return [activeAreaHeading, wonderingPlanExpiration];
-    } else if ((preyX !== 0 || preyY !== 0) && Math.random() < attackChance) {
-      console.log('attack');
-      const direction = radToDeg(Math.atan2(preyY, preyX));
-      return [direction, attackPlanExpiration];
-    } else {
-      console.log('wander');
+    } else if (!isPlanExpired) {
       return;
     }
+
+    const activeAreaHeading = getActiveAreaHeading(this.view, npcPoint);
+    if (activeAreaHeading !== undefined) {
+      // Return to active area
+      return [activeAreaHeading, wonderingPlanExpiration];
+    } else if ((preyX !== 0 || preyY !== 0) && Math.random() < attackChance) {
+      const direction = radToDeg(Math.atan2(preyY, preyX));
+      // Attack
+      return [direction, attackPlanExpiration];
+    } else {
+      // Wander
+      return;
+    }
+  }
+
+  /**
+   * Ensure larger entities are drawn on top of smaller entities.
+   */
+  private _sortEntities(): void {
+    this._entitiesLayer.graphics.sort((left, right) => {
+      const aSize = (left.symbol as SimpleMarkerSymbol).size;
+      const bSize = (right.symbol as SimpleMarkerSymbol).size;
+      return aSize - bSize;
+    });
   }
 }

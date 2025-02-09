@@ -104,7 +104,7 @@ export const maxLatitude = 75;
 export const minLongitude = -180;
 export const maxLongitude = 180;
 
-export const npcCount = 10;
+export const npcCount = 11;
 export const npcMoveSpeed = 4000;
 /*
  * Play area is the size of the screen multiplied by this factor.
@@ -112,13 +112,15 @@ export const npcMoveSpeed = 4000;
  * If player moves, and NPC becomes outside of the active area, it will have
  * strong compulsion to move back into the active area.
  */
-export const activeAreaFactor = 2;
+export const activeAreaFactor = 1.5;
 /**
  * Area within which NPCs will look for attaching/defending
  */
-export const attachAreaFactor = Math.max(activeAreaFactor / 2, 0.5);
+export const attackAreaFactor = Math.max(activeAreaFactor / 2, 0.5);
 export const escapeAreaFactor = Math.max(activeAreaFactor / 4, 1);
+export const reSpawnAreaFactor = activeAreaFactor * 4;
 export const similarSizeThreshold = 0.1;
+export const similarSizeAlternativeThreshold = 10;
 export const wonderingPlanExpiration = 2000;
 export const attackPlanExpiration = 1000;
 export const escapePlanExpiration = 500;
@@ -126,4 +128,7 @@ export const attackChance = 0.9;
 export const escapeChance = 0.99;
 
 export const initialSize = 30;
-export const maxInitialSize = 200;
+export const npcSizeMinFactor = 0.5;
+export const npcSizeMaxFactor = 2.5;
+// FEATURE: increase this when in "competitive" mode and use 45 in peaceful
+export const growthFactor = 90;

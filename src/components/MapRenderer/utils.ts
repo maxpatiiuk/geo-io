@@ -64,6 +64,7 @@ export const isInsideMercatorViewExtent = (
 
 export const getRandomPoint = (): Point =>
   new Point({
+    spatialReference: SpatialReference.WGS84,
     longitude:
       Math.random() * (maxLongitude + Math.abs(minLongitude)) + minLongitude,
     latitude:

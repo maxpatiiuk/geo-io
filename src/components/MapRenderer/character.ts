@@ -9,7 +9,7 @@ import {
   defaultSaturation,
   maxHue,
 } from './utils';
-import { initialSize } from './config';
+import { growthFactor, initialSize } from './config';
 
 const outlineSize = 4;
 
@@ -39,4 +39,21 @@ export function makePlayerSymbol(size = initialSize): SimpleMarkerSymbol {
       width: outlineSize,
     },
   });
+}
+
+/*
+ * Symbol size is in px, but query distance is in meters - doing a
+ * rough conversion here.
+ * TEST: does this depend on screen size or zoom?
+ */
+export const pxToDistance = (pxSize: number): number => 8_600 + pxSize * 254;
+
+/**
+ * Increase area at a constant rate per particle - which means radios
+ * will increase at an ever decreasing rate.
+ */
+export function increaseRadius(oldRadius: number, increase: number): number {
+  const oldArea = Math.PI * (oldRadius * oldRadius);
+  const newArea = oldArea + increase * growthFactor;
+  return Math.sqrt(newArea / Math.PI);
 }

@@ -21,6 +21,7 @@ export function useGameLogic(
   const [runtime, setRuntime] = React.useState<Runtime | undefined>(undefined);
   React.useEffect(() => {
     if (view === undefined || isGameOver || handleScoreUp === undefined) {
+      setRuntime(undefined);
       return;
     }
     const runtime = new Runtime(view, handleScoreUp, setMenuState);
