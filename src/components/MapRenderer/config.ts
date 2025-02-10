@@ -107,6 +107,11 @@ export const maxLongitude = 180;
 export const npcCount = 11;
 export const npcMoveSpeed = 4000;
 /*
+ * Just in case we are on a higher refresh rate screen, keep running NPCs at
+ * 60fps cap so that they are not too fast.
+ */
+export const npcActTimeout = 15;
+/*
  * Play area is the size of the screen multiplied by this factor.
  * NPCs are spawned within the active area of the player.
  * If player moves, and NPC becomes outside of the active area, it will have
@@ -131,7 +136,7 @@ export const initialSize = 30;
 export const npcSizeMinFactor = 0.5;
 export const npcSizeMaxFactor = 2.5;
 export const growthFactor = 90;
-export const peacefulGrowFactor = 45;
+export const explorerGrowFactor = 45;
 export const vampireLeachingRate = 10;
 export const npcVampireLeachingRate = 20;
 export const leachingRateMultiplier = 5;

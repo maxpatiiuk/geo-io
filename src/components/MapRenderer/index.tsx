@@ -3,7 +3,7 @@ import '@arcgis/map-components/components/arcgis-map';
 
 import React from 'react';
 
-import { expose, isDebug } from '../../lib/utils';
+import { expose } from '../../lib/utils';
 import type { MenuState } from '../State/types';
 import type { GetSet } from '../../lib/types';
 import type MapView from '@arcgis/core/views/MapView';
@@ -61,22 +61,18 @@ export function MapRenderer({
           // Remove all components
           view.ui.remove(view.ui.getComponents());
           view.constraints.geometry = viewConstraintExtent;
-          if (import.meta.env.MODE === 'production' || !isDebug()) {
-            view.constraints.rotationEnabled = false;
-            view.constraints.minScale = scale;
-            view.constraints.maxScale = scale;
-            navigation.momentumEnabled = false;
-            navigation.actionMap.dragPrimary = 'none';
-            navigation.actionMap.dragSecondary = 'none';
-            navigation.actionMap.dragTertiary = 'none';
-            navigation.actionMap.mouseWheel = 'none';
-            navigation.browserTouchPanEnabled = false;
-          }
+          view.constraints.rotationEnabled = false;
+          navigation.momentumEnabled = false;
+          navigation.actionMap.dragPrimary = 'none';
+          navigation.actionMap.dragSecondary = 'none';
+          navigation.actionMap.dragTertiary = 'none';
+          navigation.actionMap.mouseWheel = 'none';
+          navigation.browserTouchPanEnabled = false;
           setView(view);
 
           const consumablesLayer = makeConsumablesLayer();
           const charactersLayer = createCharacter(view);
-          if (mode !== 'peaceful') {
+          if (mode !== 'explorer') {
             charactersLayer.addMany(createNpcs(view));
           }
           view.map.addMany([consumablesLayer, charactersLayer]);

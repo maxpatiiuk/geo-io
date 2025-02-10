@@ -25,12 +25,13 @@ import {
   leachingRateMultiplier,
   npcMoveSpeed,
   npcVampireLeachingRate,
-  peacefulGrowFactor,
+  explorerGrowFactor,
   reSpawnAreaFactor,
   similarSizeAlternativeThreshold,
   similarSizeThreshold,
   vampireLeachingRate,
   wonderingPlanExpiration,
+  npcActTimeout,
 } from '../MapRenderer/config';
 import {
   degToRad,
@@ -81,7 +82,7 @@ export class Runtime {
     private readonly _setMenuState: (state: MenuState) => void,
     private readonly _mode: Mode,
   ) {
-    // BUG: document
+    // I opened a feature request to document this property
     const withView = this._viewModel as { view?: MapView };
     withView.view = this.view;
 
@@ -90,7 +91,7 @@ export class Runtime {
     this._sortEntities();
 
     this._growthFactor =
-      this._mode === 'peaceful' ? peacefulGrowFactor : growthFactor;
+      this._mode === 'explorer' ? explorerGrowFactor : growthFactor;
 
     this._character = character!;
     this._characterSymbol = character!.symbol as SimpleMarkerSymbol;
@@ -172,10 +173,9 @@ export class Runtime {
     this._sortEntities();
   }, featureQueryThrottleRate);
 
-  private _makeNpcsAct(): void {
+  _makeNpcsAct = throttle((): void => {
     const now = Date.now();
     this._npcs.forEach((npc) => {
-      const point = npc.graphic.geometry as Point;
       const isPlanExpired = npc.planExpiration < now;
       const newPlan = this._computeNeighborInteractions(
         npc.graphic,
@@ -194,6 +194,7 @@ export class Runtime {
         npc.direction = newDirection;
       }
 
+      const point = npc.graphic.geometry as Point;
       const { x, y, spatialReference } = point;
       const radiansAngle = degToRad(npc.direction);
       const newX = x + Math.cos(radiansAngle) * npcMoveSpeed;
@@ -208,7 +209,7 @@ export class Runtime {
         npc.planExpiration = 0;
       }
     });
-  }
+  }, npcActTimeout);
 
   /**
    * Find enemies/prey and decide to move to them or away.

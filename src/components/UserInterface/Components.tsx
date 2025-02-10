@@ -36,13 +36,13 @@ export function MenuLayout({
           <button
             className={buttonClassName}
             type="button"
-            onClick={(): void => handleSetMode('peaceful')}
+            onClick={(): void => handleSetMode('explorer')}
           >
-            {localization.playPeaceful}
+            {localization.playExplorer}
           </button>
         </div>
       </div>
     </div>
   );
 }
-export type Mode = 'competitive' | 'none' | 'peaceful' | 'vampire';
+export type Mode = 'competitive' | 'explorer' | 'none' | 'vampire';

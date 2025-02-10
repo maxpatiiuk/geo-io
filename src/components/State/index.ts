@@ -75,7 +75,6 @@ export function useGameLogic(
               (total, angle) => total + angle,
               0,
             ) / pressedAngles.size;
-      console.log(angle);
       runtime!.moveOnce(angle);
       const directionalPadKeyPressDuration = 100;
       manualKeyRepeatTimeout = setTimeout(
@@ -106,7 +105,6 @@ export function useGameLogic(
       document,
       'keyup',
       (event) => {
-        clearTimeout(manualKeyRepeatTimeout);
         const angle = keyMapping[event.key];
         if (angle === undefined) {
           return;

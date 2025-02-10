@@ -9,6 +9,6 @@ export const localization = {
   sourceCode: 'Source Code',
   playCompetitive: 'Play Competitive',
   playVampire: 'Play Vampire',
-  playPeaceful: 'Play Peaceful',
+  playExplorer: 'Play Explorer',
   resume: 'Resume',
 };
