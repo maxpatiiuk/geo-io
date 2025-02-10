@@ -1,0 +1,17 @@
+{
+  "name": "geo-io",
+  "display": "fullscreen",
+  "icons": [
+    {
+      "src": "/geo-io/512.webp",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/geo-io/192.webp",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "/geo-io",
+  "theme_color": "#ffffff",
+  "background_color": "#000000"
+}

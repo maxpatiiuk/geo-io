@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFile } from 'node:fs/promises';
 
 export default defineConfig({
+  base: '/geo-io',
   plugins: [react(), tailwindcss(), useArcgisCoreCdnInProduction()],
   server: {
     open: true,
