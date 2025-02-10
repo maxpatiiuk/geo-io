@@ -57,8 +57,12 @@ export function useGameLogic(
       { passive: true },
     );
 
+    let manualKeyRepeatTimeout: ReturnType<typeof setTimeout> | undefined =
+      undefined;
     const pressedAngles = new Set<number>();
     function computeKeyAngle(): void {
+      clearTimeout(manualKeyRepeatTimeout);
+
       if (pressedAngles.size === 0) {
         moveAngle.current = undefined;
         return;
@@ -71,10 +75,15 @@ export function useGameLogic(
               (total, angle) => total + angle,
               0,
             ) / pressedAngles.size;
+      console.log(angle);
       runtime!.moveOnce(angle);
+      const directionalPadKeyPressDuration = 100;
+      manualKeyRepeatTimeout = setTimeout(
+        () => runtime!.moveOnce(angle),
+        directionalPadKeyPressDuration,
+      );
     }
 
-    // FEATURE: use view's native keyboard handling to support gamepad?
     const stopKeyDown = listen(
       document,
       'keydown',
@@ -97,6 +106,7 @@ export function useGameLogic(
       document,
       'keyup',
       (event) => {
+        clearTimeout(manualKeyRepeatTimeout);
         const angle = keyMapping[event.key];
         if (angle === undefined) {
           return;
