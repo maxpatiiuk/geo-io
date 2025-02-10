@@ -62,6 +62,7 @@ export function useGameLogic(
     const pressedAngles = new Set<number>();
     function computeKeyAngle(): void {
       clearTimeout(manualKeyRepeatTimeout);
+      console.log(Array.from(pressedAngles));
 
       if (pressedAngles.size === 0) {
         moveAngle.current = undefined;
@@ -76,9 +77,13 @@ export function useGameLogic(
               0,
             ) / pressedAngles.size;
       runtime!.moveOnce(angle);
-      const directionalPadKeyPressDuration = 100;
+
+      // Single key press lasts for 200ms in DirectionalPad
+      // Because system key repeat may not kick in by then, we manually repeat
+      // the key
+      const directionalPadKeyPressDuration = 150;
       manualKeyRepeatTimeout = setTimeout(
-        () => runtime!.moveOnce(angle),
+        computeKeyAngle,
         directionalPadKeyPressDuration,
       );
     }
@@ -87,6 +92,7 @@ export function useGameLogic(
       document,
       'keydown',
       (event) => {
+        clearTimeout(manualKeyRepeatTimeout);
         const angle = keyMapping[event.key];
         if (angle !== undefined) {
           pressedAngles.add(angle);
