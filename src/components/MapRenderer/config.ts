@@ -130,5 +130,8 @@ export const escapeChance = 0.99;
 export const initialSize = 30;
 export const npcSizeMinFactor = 0.5;
 export const npcSizeMaxFactor = 2.5;
-// FEATURE: increase this when in "competitive" mode and use 45 in peaceful
 export const growthFactor = 90;
+export const peacefulGrowFactor = 45;
+export const vampireLeachingRate = 10;
+export const npcVampireLeachingRate = 20;
+export const leachingRateMultiplier = 5;

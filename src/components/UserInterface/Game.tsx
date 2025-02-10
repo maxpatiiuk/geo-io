@@ -2,13 +2,14 @@ import React from 'react';
 
 import type { MenuState } from '../State/types';
 import { GameOverOverlay } from './GameOverOverlay';
+import { type Mode } from './Components';
 import { MapRenderer } from '../MapRenderer';
-import { pauseOverlay } from './PauseOverlay';
+import { PauseOverlay } from './PauseOverlay';
 import { GET, SET } from '../../lib/utils';
 import { GameOverlay } from './GameOverlay';
 import type { GetSet } from '../../lib/types';
 
-export function Root(): React.ReactNode {
+export function Game({ mode }: { mode: GetSet<Mode> }): React.ReactNode {
   const [handleScoreUp, setHandleScoreUp] =
     React.useState<(increment: number) => void>();
   const state = React.useState<MenuState>('main');
@@ -20,19 +21,27 @@ export function Root(): React.ReactNode {
     }
     previousStateRef.current = state[GET];
   }, [state[GET]]);
+
   return (
     <>
-      <MapRenderer state={state} onScoreUp={handleScoreUp} key={gameCount} />
-      <AsideContent state={state} setHandleScoreUp={setHandleScoreUp} />
+      <MapRenderer
+        state={state}
+        onScoreUp={handleScoreUp}
+        key={gameCount}
+        mode={mode[GET]}
+      />
+      <Overlays state={state} setHandleScoreUp={setHandleScoreUp} mode={mode} />
     </>
   );
 }
 
-function AsideContent({
+function Overlays({
   state,
+  mode,
   setHandleScoreUp,
 }: {
   state: GetSet<MenuState>;
+  mode: GetSet<Mode>;
   setHandleScoreUp: (
     callback: ((increment: number) => void) | undefined,
   ) => void;
@@ -54,17 +63,18 @@ function AsideContent({
     }
     previousStateRef.current = state[GET];
   }, [state[GET]]);
-  return (
-    <>
-      {state[GET] === 'paused' && pauseOverlay}
-      {state[GET] === 'gameOver' ? (
-        <GameOverOverlay
-          score={score}
-          onRestart={(): void => state[SET]('main')}
-        />
-      ) : (
-        <GameOverlay score={score} onPause={(): void => state[SET]('paused')} />
-      )}
-    </>
+  return state[GET] === 'paused' ? (
+    <PauseOverlay
+      onResume={(): void => state[SET]('main')}
+      onSetMode={mode[SET]}
+    />
+  ) : state[GET] === 'gameOver' ? (
+    <GameOverOverlay score={score} mode={mode} />
+  ) : (
+    <GameOverlay
+      score={score}
+      onPause={(): void => state[SET]('paused')}
+      mode={mode[GET]}
+    />
   );
 }

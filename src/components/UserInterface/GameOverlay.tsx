@@ -1,15 +1,18 @@
 import React from 'react';
 import { useHighScore } from '../../hooks/useCache';
 import { localization } from '../../localization';
+import type { Mode } from './Components';
 
 export function GameOverlay({
   score,
+  mode,
   onPause: handlePause,
 }: {
   score: number;
+  mode: Mode;
   onPause: () => void;
 }): React.ReactNode {
-  const [bestScore, setBestScore] = useHighScore();
+  const [bestScore, setBestScore] = useHighScore(mode);
   const previousBestScore = React.useRef(bestScore).current;
 
   const newBestScore = Math.max(score, previousBestScore);

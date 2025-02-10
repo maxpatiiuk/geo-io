@@ -20,10 +20,16 @@ import {
   escapeAreaFactor,
   escapeChance,
   escapePlanExpiration,
+  growthFactor,
+  initialSize,
+  leachingRateMultiplier,
   npcMoveSpeed,
+  npcVampireLeachingRate,
+  peacefulGrowFactor,
   reSpawnAreaFactor,
   similarSizeAlternativeThreshold,
   similarSizeThreshold,
+  vampireLeachingRate,
   wonderingPlanExpiration,
 } from '../MapRenderer/config';
 import {
@@ -40,6 +46,7 @@ import {
   pxToDistance,
   makePlayerSymbol,
 } from '../MapRenderer/character';
+import type { Mode } from '../UserInterface/Components';
 
 const getScreenCenter = (): { x: number; y: number } => ({
   x: Math.round(window.innerWidth / 2),
@@ -66,11 +73,13 @@ export class Runtime {
   private readonly _entities: Graphic[] = [];
   private readonly _entitiesLayer: GraphicsLayer;
   private readonly _consumablesLayer: FeatureLayer;
+  private readonly _growthFactor: number;
   private _layerView: __esri.FeatureLayerView | undefined;
   constructor(
     public readonly view: MapView,
     private readonly _handleScoreUp: (increment: number) => void,
     private readonly _setMenuState: (state: MenuState) => void,
+    private readonly _mode: Mode,
   ) {
     // BUG: document
     const withView = this._viewModel as { view?: MapView };
@@ -79,6 +88,9 @@ export class Runtime {
     this._entitiesLayer = this.view.map.layers.at(1) as GraphicsLayer;
     const [character, ...npcs] = this._entitiesLayer.graphics.toArray();
     this._sortEntities();
+
+    this._growthFactor =
+      this._mode === 'peaceful' ? peacefulGrowFactor : growthFactor;
 
     this._character = character!;
     this._characterSymbol = character!.symbol as SimpleMarkerSymbol;
@@ -154,6 +166,7 @@ export class Runtime {
     this._characterSymbol.size = increaseRadius(
       this._characterSymbol.size,
       features.length,
+      this._growthFactor,
     );
     this._handleScoreUp(features.length);
     this._sortEntities();
@@ -248,10 +261,31 @@ export class Runtime {
       const isPlayer = entity === this._character;
       if (isPrey) {
         if (isPlayer) {
-          const entityReach = pxToDistance(npcSize);
-          const isInside = distance < entityReach;
-          if (isInside) {
-            this._setMenuState('gameOver');
+          const npcReach = pxToDistance(
+            npcSize + (this._mode === 'vampire' ? entitySize : 0),
+          );
+          const isWithinReach = distance < npcReach;
+          if (isWithinReach) {
+            const isConsumed =
+              this._mode !== 'vampire' ||
+              this._characterSymbol.size <= initialSize;
+            if (isConsumed) {
+              this._setMenuState('gameOver');
+            } else {
+              this._handleScoreUp(-npcVampireLeachingRate);
+              entitySymbol.size = increaseRadius(
+                entitySize,
+                -npcVampireLeachingRate,
+                this._growthFactor,
+              );
+              npcSymbol.size = increaseRadius(
+                npcSize,
+                // Reduce leaching efficiency with size
+                (leachingRateMultiplier * npcVampireLeachingRate) /
+                  Math.sqrt(npcSize),
+                this._growthFactor,
+              );
+            }
           }
         }
 
@@ -262,17 +296,37 @@ export class Runtime {
           preyDistance = distance;
         }
       } else {
-        const enemyReach = pxToDistance(entitySize);
-        const isInside = distance < enemyReach;
-        if (isInside) {
-          entitySymbol.size = increaseRadius(entitySize, npcSize);
+        const enemyReach = pxToDistance(
+          entitySize + (this._mode === 'vampire' ? npcSize : 0),
+        );
+        const isWithinReach = distance < enemyReach;
+        if (isWithinReach) {
+          const isConsumed = this._mode !== 'vampire' || npcSize <= initialSize;
+          const leachedSize = isConsumed ? npcSize : vampireLeachingRate;
+          entitySymbol.size = increaseRadius(
+            entitySize,
+            (leachingRateMultiplier * leachedSize) / Math.sqrt(entitySize),
+            this._growthFactor,
+          );
+
           if (isPlayer) {
-            this._handleScoreUp(Math.round(npcSize));
+            this._handleScoreUp(Math.round(leachedSize));
           }
-          npc.geometry = getNpcSpawnPoint(this.view, reSpawnAreaFactor);
-          npc.symbol = makePlayerSymbol(getNpcSize(this._characterSymbol.size));
-          this._sortEntities();
-          wasConsumed = true;
+
+          if (isConsumed) {
+            npc.geometry = getNpcSpawnPoint(this.view, reSpawnAreaFactor);
+            npc.symbol = makePlayerSymbol(
+              getNpcSize(this._characterSymbol.size),
+            );
+            this._sortEntities();
+            wasConsumed = true;
+          } else {
+            npcSymbol.size = increaseRadius(
+              npcSize,
+              -leachedSize,
+              this._growthFactor,
+            );
+          }
           return;
         }
         // Compute vector away from all enemies

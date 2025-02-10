@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { GetSet } from '../lib/types';
+import type { Mode } from '../components/UserInterface/Components';
 
 const prefix = 'geo-io-';
 
@@ -57,5 +58,5 @@ function useGenericCache<T>(name: string, defaultValue: T): GetSet<T> {
   return [state, setCachedState];
 }
 
-export const useHighScore = (): GetSet<number> =>
-  useGenericCache('highScore', 0);
+export const useHighScore = (mode: Mode): GetSet<number> =>
+  useGenericCache(`highScore-${mode}`, 0);

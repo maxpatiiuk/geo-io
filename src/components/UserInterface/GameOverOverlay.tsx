@@ -2,37 +2,27 @@ import React from 'react';
 
 import { useHighScore } from '../../hooks/useCache';
 import { localization } from '../../localization';
-import { buttonClassName } from './Components';
+import { MenuLayout, type Mode } from './Components';
+import type { GetSet } from '../../lib/types';
+import { GET, SET } from '../../lib/utils';
 
 export function GameOverOverlay({
   score,
-  onRestart: handleRestart,
+  mode,
 }: {
-  readonly score: number;
-  readonly onRestart: () => void;
+  score: number;
+  mode: GetSet<Mode>;
 }): React.ReactNode {
-  const [bestScore] = useHighScore();
+  const [bestScore] = useHighScore(mode[GET]);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-center text-3xl">
-      <span className="flex flex-col gap-4">
-        <h1 className="pb-4 text-6xl">{localization.gameOver}</h1>
-        <h2>
-          {localization.score} {score}
-        </h2>
-        <h2>
-          {localization.highScore} {bestScore}
-        </h2>
-        <div className="flex gap-4">
-          <button
-            className={buttonClassName}
-            type="button"
-            onClick={handleRestart}
-          >
-            {localization.playAgain}
-          </button>
-        </div>
-      </span>
-    </div>
+    <MenuLayout title={localization.gameOver} onSetMode={mode[SET]}>
+      <h2>
+        {localization.score} {score}
+      </h2>
+      <h2>
+        {localization.highScore} {bestScore}
+      </h2>
+    </MenuLayout>
   );
 }

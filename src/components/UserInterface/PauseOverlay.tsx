@@ -1,18 +1,21 @@
 import React from 'react';
 
 import { localization } from '../../localization';
+import { buttonClassName, MenuLayout } from './Components';
+import type { Mode } from './Components';
 
-export const pauseOverlay = (
-  <div className="absolute inset-0 flex h-screen w-screen items-center justify-center bg-black/70 text-center text-4xl">
-    <div className="flex flex-col gap-8">
-      {localization.paused}
-      <span>
-        {localization.pressKeyToResume(
-          <span className="rounded-xl bg-white p-px text-black">
-            {localization.esc}
-          </span>,
-        )}
-      </span>
-    </div>
-  </div>
-);
+export function PauseOverlay({
+  onSetMode: handleSetMode,
+  onResume: handleResume,
+}: {
+  onSetMode: (mode: Mode) => void;
+  onResume: () => void;
+}): React.ReactNode {
+  return (
+    <MenuLayout title={localization.paused} onSetMode={handleSetMode}>
+      <button className={buttonClassName} type="button" onClick={handleResume}>
+        {localization.resume}
+      </button>
+    </MenuLayout>
+  );
+}

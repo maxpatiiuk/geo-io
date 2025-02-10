@@ -4,12 +4,14 @@ import { direction, type MenuState } from './types';
 import React from 'react';
 import { Runtime } from './runtime';
 import { listen } from '../../lib/utils';
+import type { Mode } from '../UserInterface/Components';
 
 export function useGameLogic(
   [menuState, setMenuState]: GetSet<MenuState>,
   view: MapView | undefined,
   interactionContainer: HTMLDivElement | null,
   handleScoreUp: ((increment: number) => void) | undefined,
+  mode: Mode,
 ): Runtime | undefined {
   const setMenuStateRef = React.useRef(setMenuState);
   setMenuStateRef.current = setMenuState;
@@ -24,7 +26,7 @@ export function useGameLogic(
       setRuntime(undefined);
       return;
     }
-    const runtime = new Runtime(view, handleScoreUp, setMenuState);
+    const runtime = new Runtime(view, handleScoreUp, setMenuState, mode);
     setRuntime(runtime);
     return (): void => runtime.destroy();
   }, [view, isGameOver, handleScoreUp]);
@@ -40,6 +42,9 @@ export function useGameLogic(
       document,
       'pointerdown',
       (event) => {
+        if (menuStateRef.current !== 'main') {
+          return;
+        }
         /**
          * Release implicit pointer capture on touch devices.
          * See https://stackoverflow.com/a/70737325/8584605

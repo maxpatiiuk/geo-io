@@ -17,18 +17,21 @@ import { createCharacter } from './character';
 import { scale } from './config';
 import { makeConsumablesLayer } from './consumables';
 import { createNpcs } from './npc';
+import type { Mode } from '../UserInterface/Components';
 
 export function MapRenderer({
   state,
+  mode,
   onScoreUp: handleScoreUp,
 }: {
   state: GetSet<MenuState>;
+  mode: Mode;
   onScoreUp?: (increment: number) => void;
 }): React.ReactNode {
   const [view, setView] = React.useState<MapView | undefined>(undefined);
   const [interactionContainer, setInteractionContainer] =
     React.useState<HTMLDivElement | null>(null);
-  useGameLogic(state, view, interactionContainer, handleScoreUp);
+  useGameLogic(state, view, interactionContainer, handleScoreUp, mode);
 
   const [projectLoaded, setProjectLoaded] = React.useState(false);
   React.useEffect(
@@ -73,7 +76,9 @@ export function MapRenderer({
 
           const consumablesLayer = makeConsumablesLayer();
           const charactersLayer = createCharacter(view);
-          charactersLayer.addMany(createNpcs(view));
+          if (mode !== 'peaceful') {
+            charactersLayer.addMany(createNpcs(view));
+          }
           view.map.addMany([consumablesLayer, charactersLayer]);
         }}
       />

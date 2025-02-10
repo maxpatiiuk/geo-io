@@ -4,9 +4,8 @@ Agar.io, but more mappy.
 
 ## TODO
 
-- https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-FeatureLayer.html#orderBy
-- FEATURE: separate competitive and peaceful modes
-- FEATURE: add mega-particles
+- DOCS: Update metadata and prepare slides
+- DOCS: Schedule preparation sessions
 
 ## Installation
 
@@ -28,7 +27,7 @@ Agar.io, but more mappy.
   # For Development:
   npm run dev
   # For Production:
-  npm run build && npm run start
+  npm run build && npm run preview
   ```
 
 ## Credits
