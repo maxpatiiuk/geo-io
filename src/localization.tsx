@@ -11,4 +11,5 @@ export const localization = {
   playVampire: 'Play Vampire',
   playExplorer: 'Play Explorer',
   resume: 'Resume',
+  viewSourceCodeOnGitHub: 'View source code on GitHub',
 };

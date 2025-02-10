@@ -2,18 +2,15 @@
 
 Agar.io, but more mappy.
 
-![](./docs/screenshot.webp)
+[**Play online**](https://maxpatiiuk.github.io/geo-io/)
+
+[![](./docs/screenshot.webp)](https://maxpatiiuk.github.io/geo-io/)
 
 Features 3 modes:
 
 - Competitive - eat particles, eat NPCs, and don't get eaten.
 - Vampire - leach mass off NPCs and don't let others leach off you.
 - Explorer - peacefully explore the map and collect particles.
-
-## TODO
-
-- DOCS: Update metadata and prepare slides
-- DOCS: Schedule preparation sessions
 
 ## Installation
 

@@ -42,7 +42,14 @@ export function MenuLayout({
           </button>
         </div>
       </div>
+      <a
+        href="https://github.com/maxpatiiuk/geo-io"
+        className="fixed right-0 bottom-0 p-4 text-xl"
+      >
+        {localization.viewSourceCodeOnGitHub}
+      </a>
     </div>
   );
 }
+
 export type Mode = 'competitive' | 'explorer' | 'none' | 'vampire';
