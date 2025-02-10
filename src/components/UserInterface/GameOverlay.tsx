@@ -20,7 +20,7 @@ export function GameOverlay({
   return (
     <button
       type="button"
-      className="fixed bottom-0 left-0 m-2 rounded bg-white/40 p-2 text-4xl drop-shadow-[0_1px_2px_#000]"
+      className="fixed bottom-0 left-0 m-2 rounded bg-black/40 p-2 text-4xl drop-shadow-[0_1px_2px_#000]"
       onClick={handlePause}
     >
       {localization.score}
